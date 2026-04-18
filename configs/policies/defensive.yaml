@@ -1,0 +1,47 @@
+policy_id: defensive
+name: Defensive
+description: High emphasis on king safety, blunder avoidance, and piece protection.
+version: "1.0"
+text_priority_style: defensive
+
+weight_map:
+  material_difference: 2.0
+  bishop_pair: 1.0
+  rook_count_difference: 1.2
+  queen_presence: 0.8
+  minor_pieces_developed: 1.2
+  castled_status: 2.0
+  undeveloped_back_rank_minors: 1.0
+  pawn_shield_quality: 2.0
+  enemy_attackers_near_king: 2.5
+  open_lines_toward_king: 2.2
+  center_occupancy: 0.9
+  center_attacks: 0.8
+  center_pawn_presence: 0.9
+  hanging_own_pieces: 2.8
+  hanging_opponent_pieces: 1.2
+  checks_available: 0.7
+  captures_available: 0.9
+  threatened_major_pieces: 2.0
+  knight_outpost: 0.8
+  bishop_activity: 0.8
+  rook_on_open_file: 1.0
+  queen_overextension_risk: 1.5
+  passed_pawns: 1.2
+  isolated_pawns: 1.2
+  doubled_pawns: 1.2
+  backward_pawns: 1.2
+  pawn_islands: 1.0
+  immediate_threat: 1.0
+  forcing_moves_count: 0.7
+  tempo_gaining_candidate: 0.8
+
+group_weights:
+  material: 1.6
+  king_safety: 2.2
+  development: 1.0
+  center_control: 0.8
+  tactical: 1.4
+  piece_activity: 0.8
+  pawn_structure: 1.2
+  initiative: 0.7

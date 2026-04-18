@@ -1,0 +1,47 @@
+policy_id: aggressive
+name: Aggressive
+description: Higher emphasis on initiative, threats, king pressure, and piece activity.
+version: "1.0"
+text_priority_style: aggressive
+
+weight_map:
+  material_difference: 1.5
+  bishop_pair: 1.0
+  rook_count_difference: 1.2
+  queen_presence: 1.4
+  minor_pieces_developed: 1.4
+  castled_status: 0.8
+  undeveloped_back_rank_minors: 1.0
+  pawn_shield_quality: 0.7
+  enemy_attackers_near_king: 2.0
+  open_lines_toward_king: 2.0
+  center_occupancy: 1.2
+  center_attacks: 1.4
+  center_pawn_presence: 1.2
+  hanging_own_pieces: 1.6
+  hanging_opponent_pieces: 2.2
+  checks_available: 1.8
+  captures_available: 1.6
+  threatened_major_pieces: 2.0
+  knight_outpost: 1.4
+  bishop_activity: 1.5
+  rook_on_open_file: 1.6
+  queen_overextension_risk: 0.5
+  passed_pawns: 1.2
+  isolated_pawns: 0.5
+  doubled_pawns: 0.5
+  backward_pawns: 0.5
+  pawn_islands: 0.5
+  immediate_threat: 2.0
+  forcing_moves_count: 1.8
+  tempo_gaining_candidate: 1.6
+
+group_weights:
+  material: 1.2
+  king_safety: 0.8
+  development: 1.3
+  center_control: 1.2
+  tactical: 2.0
+  piece_activity: 1.5
+  pawn_structure: 0.6
+  initiative: 1.8

@@ -1,0 +1,28 @@
+# Heuristic only: full LLM pipeline, balanced policy, narrative on, NO engine in candidate generation
+config_id: heuristic_only
+description: "LLM player with balanced policy, narrative on, heuristic-only candidates vs Stockfish skill 3"
+
+player_type: llm              # llm | llm_raw | stockfish | random
+policy: balanced
+candidate_mode: heuristic_only    # engine_assisted | heuristic_only
+narrative_mode: "on"              # on | off
+prompt_version: v1.1
+lab_color: white
+
+opponent:
+  type: stockfish
+  engine_path: /opt/homebrew/bin/stockfish
+  skill_level: 3
+  depth: 8
+  time_limit: 0.1
+
+engine:                        # engine used for eval only (not candidate generation)
+  path: /opt/homebrew/bin/stockfish
+  skill_level: 5
+  depth: 10
+  time_limit: 0.1
+
+game_count: 20
+max_moves_per_game: 30        # full chess moves (30 = 60 plies)
+random_seed: 42
+logging_level: INFO

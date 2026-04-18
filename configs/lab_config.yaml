@@ -1,0 +1,15 @@
+stockfish_path: /opt/homebrew/bin/stockfish
+stockfish_skill_level: 5
+stockfish_depth: 10
+stockfish_time_limit: 0.1
+
+default_policy: balanced
+default_opponent: stockfish
+
+game:
+  max_moves: 200
+  save_traces: true
+  traces_dir: data/games
+
+logging:
+  level: INFO

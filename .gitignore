@@ -1,0 +1,10 @@
+venv/
+.env
+data/runs/
+data/games/
+reports/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+.claude/

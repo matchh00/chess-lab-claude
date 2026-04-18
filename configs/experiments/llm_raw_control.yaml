@@ -1,0 +1,28 @@
+# LLM raw baseline: FEN + legal moves only, no primitives, no narrative, no policy
+config_id: llm_raw_control
+description: "LLM raw player — FEN and legal moves only, no pipeline context vs Stockfish skill 3"
+
+player_type: llm_raw
+policy: null                  # no policy for llm_raw
+candidate_mode: null          # no candidate pipeline for llm_raw
+narrative_mode: "off"
+prompt_version: v1.1
+lab_color: white
+
+opponent:
+  type: stockfish
+  engine_path: /opt/homebrew/bin/stockfish
+  skill_level: 3
+  depth: 8
+  time_limit: 0.1
+
+engine:
+  path: /opt/homebrew/bin/stockfish
+  skill_level: 5
+  depth: 10
+  time_limit: 0.1
+
+game_count: 20
+max_moves_per_game: 30
+random_seed: 42
+logging_level: INFO
