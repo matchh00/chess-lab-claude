@@ -1,6 +1,9 @@
 policy_id: defensive
 name: Defensive
 description: High emphasis on king safety, blunder avoidance, and piece protection.
+plain_language: "Above all else, keep the king safe and every piece protected.
+  Avoid any move that weakens the pawn shield or invites enemy attackers.
+  Prioritize consolidation and safety over counterplay or material gain."
 version: "1.0"
 text_priority_style: defensive
 

@@ -1,6 +1,9 @@
 policy_id: development_first
 name: Development First
 description: High emphasis on development and central control in early game.
+plain_language: "Get every piece off the back rank and castle before initiating
+  complications. Control the center with pawns and piece pressure. Subordinate
+  tactical sharpness to sound development and piece coordination."
 version: "1.0"
 text_priority_style: developmental
 

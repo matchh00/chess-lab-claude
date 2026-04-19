@@ -165,6 +165,19 @@ class ExperimentManifest(BaseModel):
             return cls.model_validate_json(f.read())
 
 
+class InterpreterNarrative(BaseModel):
+    situation: str
+    alert: str
+    priority: str
+    directive: str
+    raw_output: str
+    token_count: int
+    prompt_version: str = "interpreter_v1.0"
+
+    def to_json(self) -> str:
+        return self.model_dump_json()
+
+
 class DecisionPromptRecord(BaseModel):
     system_prompt: str
     user_prompt: str
@@ -211,6 +224,9 @@ class MoveTrace(BaseModel):
     position_narrative: str = ""
     position_narrative_word_count: int = 0
     position_narrative_token_count: int = 0
+    interpreter_narrative: Optional[InterpreterNarrative] = None
+    interpreter_tokens: Optional[int] = None
+    total_tokens_this_move: Optional[int] = None
 
     def to_json(self) -> str:
         return self.model_dump_json(indent=2)

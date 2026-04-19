@@ -1,0 +1,32 @@
+config_id: learning_v1.2
+description: "v1.2 learning run — interpreter narrative with weight adaptation"
+
+player_type: llm
+policy: balanced
+candidate_mode: engine_assisted
+narrative_mode: "on"
+prompt_version: v1.2
+lab_color: white
+
+opponent:
+  type: stockfish
+  engine_path: /opt/homebrew/bin/stockfish
+  skill_level: 3
+  depth: 8
+  time_limit: 0.1
+
+engine:
+  path: /opt/homebrew/bin/stockfish
+  skill_level: 5
+  depth: 10
+  time_limit: 0.1
+
+game_count: 10
+max_moves_per_game: 30
+random_seed: 42
+logging_level: INFO
+
+learning_mode: true
+gain: 0.05
+good_threshold: 30.0
+bad_threshold: 100.0

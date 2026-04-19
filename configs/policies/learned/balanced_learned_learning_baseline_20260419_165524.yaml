@@ -1,0 +1,45 @@
+policy_id: balanced
+name: Balanced
+description: Moderate emphasis on all strategic factors.
+weight_map:
+  material_difference: 2.0
+  bishop_pair: 2.4
+  rook_count_difference: 1.5
+  queen_presence: 2.0
+  minor_pieces_developed: 1.3
+  castled_status: 1.45
+  undeveloped_back_rank_minors: 1.0499999999999998
+  pawn_shield_quality: 1.5999999999999999
+  enemy_attackers_near_king: 3.05
+  open_lines_toward_king: 1.6
+  center_occupancy: 1.1
+  center_attacks: 1.0
+  center_pawn_presence: 1.0
+  hanging_own_pieces: 4.4
+  hanging_opponent_pieces: 1.85
+  checks_available: 0.95
+  captures_available: 1.0
+  threatened_major_pieces: 3.0
+  knight_outpost: 1.1
+  bishop_activity: 1.0
+  rook_on_open_file: 1.15
+  queen_overextension_risk: 1.0
+  passed_pawns: 1.3
+  isolated_pawns: 0.9500000000000001
+  doubled_pawns: 0.9000000000000001
+  backward_pawns: 0.7
+  pawn_islands: 0.8
+  immediate_threat: 1.7500000000000002
+  forcing_moves_count: 1.0
+  tempo_gaining_candidate: 1.5000000000000004
+group_weights:
+  material: 1.5
+  king_safety: 1.4
+  development: 1.2
+  center_control: 1.0
+  tactical: 1.6
+  piece_activity: 1.0
+  pawn_structure: 0.9
+  initiative: 1.1
+text_priority_style: moderate
+version: '1.0'

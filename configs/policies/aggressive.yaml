@@ -1,6 +1,9 @@
 policy_id: aggressive
 name: Aggressive
 description: Higher emphasis on initiative, threats, king pressure, and piece activity.
+plain_language: "Prioritize threats, initiative, and piece activity above all else.
+  Accept structural weakness and reduced king cover in exchange for active, forcing
+  play. Press every opportunity to attack and complicate the position."
 version: "1.0"
 text_priority_style: aggressive
 

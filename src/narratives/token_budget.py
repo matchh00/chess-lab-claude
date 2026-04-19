@@ -5,6 +5,11 @@ from functools import lru_cache
 
 import tiktoken
 
+# v1.2 two-call token targets
+INTERPRETER_MAX_TOKENS: int = 400
+DECISION_MAX_TOKENS: int = 1000
+COMBINED_TARGET_TOKENS: int = 1400
+
 
 @dataclass
 class BudgetResult:

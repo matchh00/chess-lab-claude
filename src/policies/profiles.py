@@ -11,6 +11,7 @@ class PolicyProfile(BaseModel):
     policy_id: str
     name: str
     description: str
+    plain_language: str = ""
     weight_map: dict[str, float] = Field(default_factory=dict)
     group_weights: dict[str, float] = Field(default_factory=dict)
     text_priority_style: str = "moderate"

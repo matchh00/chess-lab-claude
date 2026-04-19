@@ -1,6 +1,9 @@
 policy_id: endgame_clean
 name: Endgame Clean
 description: High emphasis on pawn structure, king activity, and conversion.
+plain_language: "Simplify toward a winning pawn endgame. Passed pawns and material
+  precision are paramount. King activity matters more than pawn cover here —
+  keep the material balance favorable and create or advance a passer."
 version: "1.0"
 text_priority_style: endgame
 

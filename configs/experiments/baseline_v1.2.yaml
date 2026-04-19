@@ -1,0 +1,27 @@
+config_id: baseline_v1.2
+description: "v1.2 baseline — interpreter narrative, no FEN, tone-graded candidates"
+
+player_type: llm
+policy: balanced
+candidate_mode: engine_assisted
+narrative_mode: "on"
+prompt_version: v1.2
+lab_color: white
+
+opponent:
+  type: stockfish
+  engine_path: /opt/homebrew/bin/stockfish
+  skill_level: 3
+  depth: 8
+  time_limit: 0.1
+
+engine:
+  path: /opt/homebrew/bin/stockfish
+  skill_level: 5
+  depth: 10
+  time_limit: 0.1
+
+game_count: 5
+max_moves_per_game: 30
+random_seed: 42
+logging_level: INFO

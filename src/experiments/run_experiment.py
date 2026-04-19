@@ -33,6 +33,7 @@ from src.llm.client import call_llm
 from src.llm.decision import choose_move
 from src.llm.prompts import build_prompt
 from src.narratives.candidate_narrative import build_candidate_narrative
+from src.narratives.llm_narrator import build_interpreter_narrative
 from src.narratives.position_narrative import build_position_narrative
 from src.policies.profiles import load_policy
 from src.policies.summaries import text_priority_summary
@@ -52,6 +53,16 @@ logger = logging.getLogger(__name__)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+def _san_history(board: chess.Board) -> list[str]:
+    """Return the full move history as SAN strings by replaying from the start."""
+    temp = chess.Board()
+    san_moves: list[str] = []
+    for move in list(board.move_stack):
+        san_moves.append(temp.san(move))
+        temp.push(move)
+    return san_moves
+
 
 def _board_snapshot(board: chess.Board, game_id: str, ply: int) -> BoardSnapshot:
     return BoardSnapshot(
@@ -86,6 +97,7 @@ def _lab_move_llm(
     rng: random.Random,
     game_id: str,
     ply: int,
+    prompt_version: str = "v1.1",
 ) -> tuple[str, MoveTrace]:
     snap = _board_snapshot(board, game_id, ply)
     eval_before = engine.evaluate(board)
@@ -127,8 +139,25 @@ def _lab_move_llm(
         updated.append(c.model_copy(update={"candidate_narrative": narr.text}))
     candidates = updated
 
+    # Interpreter call for v1.2
+    interp_narr = None
+    if prompt_version == "v1.2":
+        san_history = _san_history(board)
+        interp_narr = build_interpreter_narrative(
+            weighted_states=baseline_states,
+            primitives=primitives,
+            policy=policy,
+            move_history=san_history,
+            move_count=len(board.move_stack),
+        )
+
     # Prompt + decision
-    prompt_record = build_prompt(snap, pos_narrative, policy_summary, candidates)
+    prompt_record = build_prompt(
+        snap, pos_narrative, policy_summary, candidates,
+        version=prompt_version,
+        interpreter_narrative=interp_narr,
+        policy_plain_language=policy.plain_language if policy else "",
+    )
     decision = choose_move(prompt_record, candidates, board, llm_call_fn=call_llm)
 
     # Apply move
@@ -138,6 +167,12 @@ def _lab_move_llm(
 
     cp = _cp_loss(eval_before, eval_after)
     blunder = compute_blunder_label(cp)
+
+    interp_tokens = interp_narr.token_count if interp_narr else None
+    total_tokens = (
+        (interp_tokens or 0) + prompt_record.token_count
+        if interp_tokens is not None else None
+    )
 
     trace = MoveTrace(
         game_id=game_id,
@@ -156,6 +191,9 @@ def _lab_move_llm(
         position_narrative=pos_narrative,
         position_narrative_word_count=pos_word_count,
         position_narrative_token_count=pos_token_count,
+        interpreter_narrative=interp_narr,
+        interpreter_tokens=interp_tokens,
+        total_tokens_this_move=total_tokens,
     )
     return decision.selected_uci, trace
 
@@ -246,7 +284,8 @@ def play_game(
                 if player_type == "llm":
                     uci, mt = _lab_move_llm(
                         board, lab_color, engine, extractor, policy,
-                        narrative_mode, candidate_mode, rng, game_id, ply
+                        narrative_mode, candidate_mode, rng, game_id, ply,
+                        prompt_version=config.get("prompt_version", "v1.1"),
                     )
                     move_traces.append(mt)
                     eval_before = mt.engine_eval_before

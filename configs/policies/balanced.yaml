@@ -1,6 +1,9 @@
 policy_id: balanced
 name: Balanced
 description: Moderate emphasis on all strategic factors.
+plain_language: "Weigh all factors with equal consideration. No single concern
+  dominates. Seek moves that are sound across material, safety, and activity
+  without overcommitting to any one dimension."
 version: "1.0"
 text_priority_style: moderate
 

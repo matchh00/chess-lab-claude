@@ -18,9 +18,11 @@ from typing import Optional
 
 import yaml
 
+from src.analytics.report_builder import build_reports
 from src.environment.engine_wrapper import EngineWrapper
 from src.experiments.run_experiment import play_game
 from src.gameplay.players import LLMRawPlayer
+from src.storage.models import ExperimentManifest, GameTrace, MoveTrace
 from src.learning.evaluator import evaluate_move
 from src.learning.influence import score_move_influence, InfluenceRecord
 from src.learning.learning_log import GameAdjustmentEntry, LearningLog
@@ -97,10 +99,29 @@ def run_with_learning(
     print(f"\nRun: {run_id}  |  learning_mode={learning_mode}")
     print(f"Config: {config_path}  |  {game_count} games  |  player={player_type}\n")
 
+    opp_cfg = config["opponent"]
+    manifest = ExperimentManifest(
+        run_id=run_id,
+        config_path=config_path,
+        config=config,
+        total_games=game_count,
+        player_type=player_type,
+        narrative_mode=config.get("narrative_mode", "on"),
+        candidate_mode=config.get("candidate_mode", "engine_assisted") or "",
+        policy_name=policy_name or "",
+        opponent_type=opp_cfg.get("type", "stockfish"),
+        opponent_skill=opp_cfg.get("skill_level", 3),
+        prompt_version=config.get("prompt_version", "v1.1"),
+        random_seed=seed,
+    )
+
     learning_log = LearningLog(run_id=run_id)
     summary = LearningGameSummary(run_id=run_id)
     all_adjustments: list[WeightAdjustment] = []
     all_influence: list[InfluenceRecord] = []
+    all_game_traces: list[GameTrace] = []
+    all_move_traces: list[MoveTrace] = []
+    traces_by_game: dict[str, list[MoveTrace]] = {}
 
     try:
         for i in range(game_count):
@@ -117,6 +138,18 @@ def run_with_learning(
                 game_id=game_id,
                 game_num=i + 1,
             )
+
+            game_trace.save(str(run_dir / "games" / f"{game_id}.json"))
+            mt_path = run_dir / "traces" / f"{game_id}.json"
+            with open(mt_path, "w") as f:
+                f.write("[" + ",\n".join(mt.to_json() for mt in move_traces) + "]")
+
+            all_game_traces.append(game_trace)
+            all_move_traces.extend(move_traces)
+            traces_by_game[game_id] = move_traces
+            manifest.game_ids.append(game_id)
+            manifest.completed_games += 1
+
             print(f"  result={game_trace.result or 'limit'}  plies={game_trace.total_plies}")
 
             evaluations = [evaluate_move(t) for t in move_traces]
@@ -155,6 +188,21 @@ def run_with_learning(
 
     finally:
         engine.close()
+
+    manifest.end_time = datetime.now(UTC)
+    manifest.save(str(run_dir / "manifest.json"))
+
+    print("Running analytics...", flush=True)
+    paths = build_reports(
+        run_id=run_id,
+        run_dir=run_dir,
+        manifest=manifest,
+        all_move_traces=all_move_traces,
+        all_game_traces=all_game_traces,
+        traces_by_game=traces_by_game,
+    )
+    for name, path in paths.items():
+        print(f"  {name}: {path}")
 
     learning_log.save(run_dir / "learning_log.json")
 
