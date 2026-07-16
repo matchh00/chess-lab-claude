@@ -64,6 +64,14 @@ def compare_runs(run_ids: list[str], base_dir: str = "data/runs") -> str:
         ("policy_name",    "Policy"),
         ("opponent_skill", "Opp skill"),
         ("prompt_version", "Prompt version"),
+        ("self_model_mode", "Self-model mode"),
+    ]
+
+    CALIBRATION_METRICS = [
+        ("confidence_cpl_correlation",     "Conf-CPL corr"),
+        ("mean_confidence",                "Mean confidence"),
+        ("mean_confidence_on_blunders",    "Conf on blunders"),
+        ("mean_confidence_on_clean_moves", "Conf on clean"),
     ]
 
     col_w = max(20, max(len(rid[:30]) for rid in run_ids) + 2)
@@ -90,6 +98,15 @@ def compare_runs(run_ids: list[str], base_dir: str = "data/runs") -> str:
     lines.append("  Metrics")
     for field, label in METRICS:
         vals = [_fmt(reports[rid].get(field)) for rid in run_ids]
+        lines.append(_row(f"  {label}", vals))
+
+    lines.append("")
+    lines.append("  Confidence calibration")
+    for field, label in CALIBRATION_METRICS:
+        vals = [
+            _fmt(reports[rid].get("confidence_calibration", {}).get(field))
+            for rid in run_ids
+        ]
         lines.append(_row(f"  {label}", vals))
 
     lines.append("")

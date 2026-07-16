@@ -149,6 +149,8 @@ class ExperimentManifest(BaseModel):
     opponent_type: str = "stockfish"
     opponent_skill: int = 3
     prompt_version: str = "v1.1"
+    self_model_mode: str = "off"     # off | history | full
+    self_model_scope: str = "game"   # game | run
     random_seed: Optional[int] = None
     notes: str = ""
 
@@ -171,6 +173,7 @@ class DecisionPromptRecord(BaseModel):
     position_summary: str = ""
     policy_summary: str = ""
     candidate_block: str = ""
+    self_model_block: str = ""
     response_schema: str = ""
     model: str = "claude-sonnet-4-6"
     temperature: float = 0.2
@@ -211,6 +214,8 @@ class MoveTrace(BaseModel):
     position_narrative: str = ""
     position_narrative_word_count: int = 0
     position_narrative_token_count: int = 0
+    self_model_mode: str = "off"
+    self_model_block: str = ""
 
     def to_json(self) -> str:
         return self.model_dump_json(indent=2)

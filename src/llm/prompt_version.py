@@ -7,6 +7,7 @@ CURRENT_VERSION = "v1.1"
 VERSIONS: dict[str, str] = {
     "v1.0": "configs/llm/prompts/v1.0.md",
     "v1.1": "configs/llm/prompts/v1.1.md",
+    "v1.2": "configs/llm/prompts/v1.2.md",
 }
 
 

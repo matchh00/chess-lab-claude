@@ -9,6 +9,10 @@ from src.analytics.game_metrics import build_game_summary_df, compute_game_metri
 from src.analytics.move_metrics import build_move_log_df
 from src.analytics.primitive_attribution import compute_primitive_attribution
 from src.analytics.run_metrics import compute_run_metrics
+from src.analytics.self_model_metrics import (
+    compute_confidence_calibration,
+    compute_self_model_usage,
+)
 from src.storage.models import ExperimentManifest, GameTrace, MoveTrace
 
 
@@ -39,6 +43,8 @@ def build_reports(
 
     # ── Run report JSON ───────────────────────────────────────────────────────
     run_metrics = compute_run_metrics(run_id, game_df, all_move_traces)
+    run_metrics["confidence_calibration"] = compute_confidence_calibration(all_move_traces)
+    run_metrics["self_model_usage"] = compute_self_model_usage(all_move_traces)
     run_report_path = run_dir / "run_report.json"
     with open(run_report_path, "w") as f:
         json.dump(run_metrics, f, indent=2, default=str)
@@ -82,6 +88,7 @@ def _build_markdown(
     lines.append(f"| Candidate mode | {manifest.candidate_mode} |")
     lines.append(f"| Opponent | {manifest.opponent_type} skill {manifest.opponent_skill} |")
     lines.append(f"| Prompt version | {manifest.prompt_version} |")
+    lines.append(f"| Self-model mode | {manifest.self_model_mode} ({manifest.self_model_scope} scope) |")
     lines.append(f"| Games | {manifest.completed_games}/{manifest.total_games} |")
     lines.append(f"| Seed | {manifest.random_seed} |")
     lines.append("")
@@ -125,6 +132,31 @@ def _build_markdown(
             corr = f"{row['correlation']:.3f}" if pd.notna(row["correlation"]) else "N/A"
             lines.append(f"| {row['primitive_id']} | {corr} | {int(row['n_observations'])} |")
         lines.append("")
+
+    calibration = run_metrics.get("confidence_calibration", {})
+    if calibration.get("n_decisions", 0) >= 2:
+        lines.append("## Confidence Calibration\n")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
+        corr = calibration.get("confidence_cpl_correlation")
+        lines.append(f"| Confidence-CPL correlation | {corr:.3f} |" if corr is not None
+                     else "| Confidence-CPL correlation | N/A |")
+        conf_bl = calibration.get("mean_confidence_on_blunders")
+        conf_cl = calibration.get("mean_confidence_on_clean_moves")
+        lines.append(f"| Mean confidence on blunders | {conf_bl:.2f} |" if conf_bl is not None
+                     else "| Mean confidence on blunders | N/A |")
+        lines.append(f"| Mean confidence on clean moves | {conf_cl:.2f} |" if conf_cl is not None
+                     else "| Mean confidence on clean moves | N/A |")
+        lines.append("")
+        bins = calibration.get("bins", [])
+        if bins:
+            lines.append("| Confidence bin | N | Mean CPL | Blunder rate |")
+            lines.append("|----------------|---|----------|--------------|")
+            for b in bins:
+                mean_cpl = f"{b['mean_cpl']:.1f}" if b["mean_cpl"] is not None else "—"
+                br = f"{b['blunder_rate']:.1%}" if b["blunder_rate"] is not None else "—"
+                lines.append(f"| {b['confidence_range']} | {b['n']} | {mean_cpl} | {br} |")
+            lines.append("")
 
     rank_dist = run_metrics.get("candidate_rank_distribution", {})
     if rank_dist:

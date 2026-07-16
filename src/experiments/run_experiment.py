@@ -38,6 +38,8 @@ from src.policies.profiles import load_policy
 from src.policies.summaries import text_priority_summary
 from src.policies.weighting import apply_policy
 from src.primitives.extractor import PrimitiveExtractor, build_default_registry
+from src.self_model.memory import SelfModelMemory
+from src.self_model.renderers import render_history_block, render_self_model_block
 from src.storage.models import (
     BoardSnapshot,
     CandidateMoveRecord,
@@ -75,6 +77,20 @@ def _cp_loss(eval_before: Optional[float], eval_after: Optional[float]) -> Optio
 
 # ── per-ply lab move functions ────────────────────────────────────────────────
 
+def _build_self_model_block(
+    self_memory: Optional[SelfModelMemory],
+    self_model_mode: str,
+) -> str:
+    if self_memory is None or self_model_mode == "off":
+        return ""
+    state = self_memory.state()
+    if self_model_mode == "history":
+        return render_history_block(state)
+    if self_model_mode == "full":
+        return render_self_model_block(state)
+    raise ValueError(f"Unknown self_model_mode: {self_model_mode!r}")
+
+
 def _lab_move_llm(
     board: chess.Board,
     lab_color: chess.Color,
@@ -86,6 +102,9 @@ def _lab_move_llm(
     rng: random.Random,
     game_id: str,
     ply: int,
+    prompt_version: str = "v1.1",
+    self_memory: Optional[SelfModelMemory] = None,
+    self_model_mode: str = "off",
 ) -> tuple[str, MoveTrace]:
     snap = _board_snapshot(board, game_id, ply)
     eval_before = engine.evaluate(board)
@@ -127,8 +146,14 @@ def _lab_move_llm(
         updated.append(c.model_copy(update={"candidate_narrative": narr.text}))
     candidates = updated
 
+    # Self-model context (condition B: history, condition C: full self-model)
+    self_model_block = _build_self_model_block(self_memory, self_model_mode)
+
     # Prompt + decision
-    prompt_record = build_prompt(snap, pos_narrative, policy_summary, candidates)
+    prompt_record = build_prompt(
+        snap, pos_narrative, policy_summary, candidates,
+        version=prompt_version, self_model_block=self_model_block,
+    )
     decision = choose_move(prompt_record, candidates, board, llm_call_fn=call_llm)
 
     # Apply move
@@ -138,6 +163,19 @@ def _lab_move_llm(
 
     cp = _cp_loss(eval_before, eval_after)
     blunder = compute_blunder_label(cp)
+
+    # Close the loop: the outcome of this decision feeds the next one's self-model
+    if self_memory is not None and self_model_mode != "off":
+        san_played = chess.Board(snap.fen).san(move_obj)
+        self_memory.observe_move(
+            game_id=game_id,
+            ply_index=ply,
+            san=san_played,
+            decision=decision,
+            centipawn_loss=cp,
+            blunder_label=blunder,
+            weighted_states=baseline_states,
+        )
 
     trace = MoveTrace(
         game_id=game_id,
@@ -156,6 +194,8 @@ def _lab_move_llm(
         position_narrative=pos_narrative,
         position_narrative_word_count=pos_word_count,
         position_narrative_token_count=pos_token_count,
+        self_model_mode=self_model_mode,
+        self_model_block=self_model_block,
     )
     return decision.selected_uci, trace
 
@@ -208,12 +248,18 @@ def play_game(
     rng: random.Random,
     game_id: str,
     game_num: int,
+    self_memory: Optional[SelfModelMemory] = None,
 ) -> tuple[GameTrace, list[MoveTrace]]:
     player_type = config["player_type"]
     narrative_mode = config.get("narrative_mode", "on")
     candidate_mode = config.get("candidate_mode", "engine_assisted")
+    prompt_version = config.get("prompt_version", "v1.1")
+    self_model_mode = config.get("self_model_mode", "off")
     max_moves = config.get("max_moves_per_game", 30)
     lab_color = chess.WHITE if config.get("lab_color", "white") == "white" else chess.BLACK
+
+    if self_memory is not None:
+        self_memory.start_game()
 
     opp_cfg = config["opponent"]
     opponent = make_opponent(
@@ -246,7 +292,10 @@ def play_game(
                 if player_type == "llm":
                     uci, mt = _lab_move_llm(
                         board, lab_color, engine, extractor, policy,
-                        narrative_mode, candidate_mode, rng, game_id, ply
+                        narrative_mode, candidate_mode, rng, game_id, ply,
+                        prompt_version=prompt_version,
+                        self_memory=self_memory,
+                        self_model_mode=self_model_mode,
                     )
                     move_traces.append(mt)
                     eval_before = mt.engine_eval_before
@@ -383,10 +432,16 @@ def run_experiment(config_path: str, game_count_override: Optional[int] = None,
     extractor = None
     policy = None
     llm_raw_player = None
+    self_memory = None
+
+    self_model_mode = config.get("self_model_mode", "off")
+    self_model_scope = config.get("self_model_scope", "game")
 
     if player_type == "llm":
         extractor = PrimitiveExtractor(build_default_registry())
         policy = load_policy(policy_name)
+        if self_model_mode != "off":
+            self_memory = SelfModelMemory(scope=self_model_scope)
     elif player_type == "llm_raw":
         llm_raw_player = LLMRawPlayer(llm_call_fn=call_llm)
 
@@ -402,6 +457,8 @@ def run_experiment(config_path: str, game_count_override: Optional[int] = None,
         opponent_type=opp_cfg.get("type", "stockfish"),
         opponent_skill=opp_cfg.get("skill_level", 3),
         prompt_version=config.get("prompt_version", "v1.1"),
+        self_model_mode=self_model_mode,
+        self_model_scope=self_model_scope,
         random_seed=seed,
     )
 
@@ -411,7 +468,7 @@ def run_experiment(config_path: str, game_count_override: Optional[int] = None,
 
     game_count = config.get("game_count", 20)
     print(f"\nRun: {run_id}")
-    print(f"Config: {config_path}  |  {game_count} games  |  player={player_type}  |  narrative={manifest.narrative_mode}\n")
+    print(f"Config: {config_path}  |  {game_count} games  |  player={player_type}  |  narrative={manifest.narrative_mode}  |  self_model={self_model_mode}\n")
 
     for i in range(game_count):
         game_id = str(uuid.uuid4())
@@ -426,6 +483,7 @@ def run_experiment(config_path: str, game_count_override: Optional[int] = None,
                 rng=rng,
                 game_id=game_id,
                 game_num=i + 1,
+                self_memory=self_memory,
             )
             # Save game trace
             gt_path = run_dir / "games" / f"{game_id}.json"

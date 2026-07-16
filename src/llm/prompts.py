@@ -36,6 +36,7 @@ def build_prompt(
     policy_summary: str,
     candidates: list[CandidateMoveRecord],
     version: str = "v1.1",
+    self_model_block: str = "",
 ) -> DecisionPromptRecord:
     template_path = get_template_path(version)
     with open(template_path) as f:
@@ -55,10 +56,14 @@ def build_prompt(
         f"## Policy Guidance",
         policy_summary or "(no policy guidance available)",
         "",
+    ]
+    if self_model_block:
+        user_parts.extend([self_model_block, ""])
+    user_parts.extend([
         candidate_block,
         "",
         "Respond with JSON only.",
-    ]
+    ])
     user_prompt = "\n".join(user_parts)
 
     token_count = count_tokens(system_prompt + "\n" + user_prompt)
@@ -70,6 +75,7 @@ def build_prompt(
         position_summary=position_narrative,
         policy_summary=policy_summary,
         candidate_block=candidate_block,
+        self_model_block=self_model_block,
         response_schema=_RESPONSE_SCHEMA,
         prompt_version=version,
         token_count=token_count,

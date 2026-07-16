@@ -102,6 +102,9 @@ reports/latest/{run_id}_summary.md   markdown report with key metrics and attrib
 | `narrative_off.yaml` | LLM | engine-assisted | off | narrative ablation |
 | `llm_raw_control.yaml` | LLM raw | none | off | pipeline isolation baseline |
 | `heuristic_only.yaml` | LLM | heuristic-only | on | no-engine candidate generation |
+| `self_model_a.yaml` | LLM | engine-assisted | on | self-model condition A: board only (control) |
+| `self_model_b.yaml` | LLM | engine-assisted | on | self-model condition B: decision history shown |
+| `self_model_c.yaml` | LLM | engine-assisted | on | self-model condition C: full self-modeling loop |
 
 All configs pit the lab (white) against Stockfish skill 3. Game count, seed, max moves, and prompt version are all configurable per experiment.
 
@@ -127,8 +130,32 @@ Weights are loaded from YAML at runtime. Available profiles:
 |---------|----------------|
 | `v1.0` | SAN + UCI + engine eval (cp) + source label + risk flags |
 | `v1.1` | SAN + UCI + narrative + risk flags only — no engine signals |
+| `v1.2` | as v1.1, plus instructions for an optional Decision History / Self-Model section |
 
-v1.1 is the current default. It removes engine evaluations and source labels from the prompt so the LLM cannot shadow the engine's ranking. This is the scientifically honest version for testing narrative value.
+v1.1 is the current default. It removes engine evaluations and source labels from the prompt so the LLM cannot shadow the engine's ranking. This is the scientifically honest version for testing narrative value. v1.2 is used by the self-model experiment; when no self-model section is present it behaves like v1.1.
+
+---
+
+## Self-model experiment
+
+Tests whether a **causally embedded self-model** — a representation of the lab's own decision-making that feeds back into its next decision — improves move quality and confidence calibration. A self-model that can be removed without changing behavior is decorative; the three conditions make that ablation measurable:
+
+| Condition | `self_model_mode` | What the LLM sees about itself |
+|-----------|-------------------|-------------------------------|
+| A (control) | `off` | nothing — board model only |
+| B (history) | `history` | its recent moves, confidences, and measured CPL outcomes (facts only) |
+| C (full loop) | `full` | condition B plus derived calibration stats, detected bias patterns, and directives |
+
+After every lab move, the outcome (centipawn loss, blunder label, dominant policy signals at decision time) is folded into a `SelfModelMemory`. In condition C the memory's pattern detectors look for overconfidence, confidence-outcome miscalibration, signal categories that systematically precede costly moves, and losing streaks — and render them into the next prompt, closing the loop. Detection and rendering are fully deterministic; the run seed reproduces the whole trajectory.
+
+Comparison metrics (in `run_report.json` under `confidence_calibration`): average CPL, confidence-CPL correlation, mean confidence on blunders vs clean moves, and blunder rate per confidence bin. See [RESEARCH_LOG.md](RESEARCH_LOG.md) for hypotheses and design details.
+
+```bash
+python -m src.experiments.run_experiment configs/experiments/self_model_a.yaml --games 20
+python -m src.experiments.run_experiment configs/experiments/self_model_b.yaml --games 20
+python -m src.experiments.run_experiment configs/experiments/self_model_c.yaml --games 20
+python -m src.experiments.compare_runs self_model_a_<ts> self_model_b_<ts> self_model_c_<ts>
+```
 
 ---
 
@@ -159,6 +186,7 @@ src/
   narratives/       position narrative, candidate narratives, token budgets
   candidates/       generator → filter → rank → shuffle → annotate
   llm/              prompt builder, versioning, schemas, client, decision engine
+  self_model/       decision memory, bias pattern detection, self-model renderers
   gameplay/         move loop, game runner, LLM and raw players
   analytics/        move/game/run metrics, primitive attribution, report builder
   experiments/      run_experiment.py, compare_runs.py
@@ -170,7 +198,7 @@ configs/
   experiments/      baseline.yaml, narrative_off.yaml, llm_raw_control.yaml, ...
   llm/prompts/      v1.0.md, v1.1.md
 
-tests/              192 tests, all passing
+tests/              227 tests, all passing
 ```
 
 ---

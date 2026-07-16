@@ -1,0 +1,32 @@
+# Self-model experiment, condition A: board model only (control).
+# Identical to conditions B and C except self_model_mode — the prompt never
+# contains a Decision History or Self-Model section.
+config_id: self_model_a
+description: "Self-model condition A (control): LLM sees the position only, no decision history, prompt v1.2"
+
+player_type: llm              # llm | llm_raw | stockfish | random
+policy: balanced
+candidate_mode: engine_assisted   # engine_assisted | heuristic_only
+narrative_mode: "on"              # on | off
+prompt_version: v1.2
+self_model_mode: "off"            # off | history | full
+self_model_scope: game            # game | run
+lab_color: white
+
+opponent:
+  type: stockfish
+  engine_path: /opt/homebrew/bin/stockfish
+  skill_level: 3
+  depth: 8
+  time_limit: 0.1
+
+engine:                        # engine used for candidate generation
+  path: /opt/homebrew/bin/stockfish
+  skill_level: 5
+  depth: 10
+  time_limit: 0.1
+
+game_count: 20
+max_moves_per_game: 30        # full chess moves (30 = 60 plies)
+random_seed: 42
+logging_level: INFO

@@ -22,6 +22,9 @@ The core research question:
 | *(planned)* | narrative_off | v1.1 | 20 | — | — | — |
 | *(planned)* | llm_raw_control | v1.1 | 20 | — | — | — |
 | *(planned)* | heuristic_only | v1.1 | 20 | — | — | — |
+| *(planned)* | self_model_a | v1.2 | 20 | — | — | — |
+| *(planned)* | self_model_b | v1.2 | 20 | — | — | — |
+| *(planned)* | self_model_c | v1.2 | 20 | — | — | — |
 
 ---
 
@@ -206,6 +209,83 @@ reasoning quality.
 **Secondary question:** Does the LLM do better or worse at selecting rank-1
 candidates when engine signals are absent from both the candidate pool and the
 prompt?
+
+---
+
+## Entry 002 — 2026-07-16
+
+### Phase 9 designed: the self-model experiment (conditions A/B/C)
+
+**Motivation.** A discussion of recursive self-modeling frameworks raised a
+question that maps cleanly onto this lab: *is the system merely analyzing the
+game, or is it also modeling its own process of analyzing the game — and does
+that self-model causally change what it does next?* A self-model that is only
+a diary written after the fact is decorative. One with genuine causal force
+should survive an intervention test: **remove it and the system's trajectory
+should measurably change.** Chess is an ideal substrate because every internal
+belief (confidence, signal weighting, characteristic mistakes) is eventually
+scored against engine ground truth.
+
+**Design.** Three conditions, identical in every respect (policy, candidates,
+narrative, opponent, seed, prompt v1.2) except `self_model_mode`:
+
+| Condition | Mode | Prompt addition |
+|-----------|------|-----------------|
+| A (control) | `off` | none — board model only |
+| B (history) | `history` | factual record of recent decisions: move, confidence, measured CPL |
+| C (full loop) | `full` | B plus derived self-model: calibration stats, detected bias patterns, directives |
+
+B is the critical middle condition: it separates "seeing your own past" from
+"seeing an interpretation of your own judgment." If C beats A but B equals C,
+raw history is doing the work, not the self-model.
+
+**Mechanism.** After each lab move, the outcome is folded into a
+`SelfModelMemory` as a `MoveReflection` (confidence, centipawn loss, blunder
+label, and the policy signal categories that dominated the weighted state at
+decision time). Deterministic detectors then look for:
+
+- **overconfidence** — ≥2 high-confidence (≥0.7) moves losing 100+ cp;
+- **calibration gap** — mean confidence on costly moves not lower than on clean moves;
+- **category bias** — a signal category whose dominance precedes ≥1.5× the
+  overall mean CPL over ≥3 decisions (e.g. "when initiative dominates my
+  reading, I average 220cp loss vs 90cp overall");
+- **cost streak** — last 3 moves all costly.
+
+In condition C these render into the next prompt together with fixed
+directives per pattern kind. No free-form generation is in the loop — the
+self-model is reproducible from the seed.
+
+**Measures** (now computed for every run in `run_report.json` →
+`confidence_calibration`):
+
+1. Average CPL per condition (primary).
+2. Confidence-CPL correlation (calibration; more negative = better).
+3. Mean confidence on blunders vs clean moves.
+4. Blunder rate per confidence bin.
+5. Whether condition C's confidence drops after detected overconfidence
+   (adaptation — inspect traces where a self-model block contains a pattern).
+
+**Hypotheses.**
+
+- H1: C shows lower average CPL than A (the self-model has causal force).
+- H2: C shows better calibration (more negative confidence-CPL correlation,
+  lower confidence on blunders) than both A and B.
+- H3: B improves calibration over A but less than C — interpretation adds
+  value beyond raw history.
+- H0 (null worth taking seriously): A ≈ B ≈ C, i.e. the self-model text is
+  decorative and the LLM's per-move judgment is unaffected by information
+  about its own past reliability.
+
+**Scope note.** `self_model_scope: game` (default) resets memory each game;
+`run` persists it across games, which tests whether biases learned against
+the same opponent transfer. First runs use game scope so games stay
+independent for CPL comparison.
+
+**Non-claims.** This experiment measures whether a causally embedded
+self-representation improves decision quality and calibration. It makes no
+claims about consciousness or subjecthood — it operationalizes exactly one
+testable ingredient from that discussion (causal necessity of the self-model,
+via ablation) and leaves the philosophy at the door.
 
 ---
 
